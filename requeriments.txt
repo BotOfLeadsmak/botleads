@@ -1,4 +1,0 @@
-pyTelegramBotAPI
-apscheduler
-requests
-pillow
