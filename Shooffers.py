@@ -14,8 +14,8 @@ from io import BytesIO
 TOKEN = "7283344497:AAHX_-L_PDPvDME3gXxl-vUh4viNqOWHiXg"
 ADMIN = [7363883967]
 CANAL_ID = -1001984009490
-APP_ID = " 18381520002"
-SECRET = "3MXCCHQHEKEKVWHTCAUCZWZROXMTYHKI"
+APP_ID = "18381520002"
+SECRET = "OBSJ45U4BKTSCNH7OSWCTZPNBKYB5RHU"
 ENDPOINT = "https://open-api.affiliate.shopee.com.br/graphql"
 HISTORICO_JSON = "enviados.json"
 TEMPLATE_PATH = "template/template.png"
@@ -75,20 +75,29 @@ def buscar_nova_oferta(ids_enviados):
     """
     payload = json.dumps({"query": query})
     timestamp = str(int(time.time()))
-    raw = APP_ID + timestamp + payload + SECRET
+    raw = APP_ID.strip() + timestamp + payload + SECRET.strip()
     assinatura = hashlib.sha256(raw.encode()).hexdigest()
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"SHA256 Credential={APP_ID}, Timestamp={timestamp}, Signature={assinatura}"
+        "Authorization": f"SHA256 Credential={APP_ID.strip()}, Timestamp={timestamp}, Signature={assinatura}"
     }
 
     response = requests.post(ENDPOINT, headers=headers, data=payload)
-    if response.status_code == 200:
+
+    try:
         data = response.json()
-        for item in data["data"]["productOfferV2"]["nodes"]:
-            if item["itemId"] not in ids_enviados:
-                return item
+        nodes = data["data"]["productOfferV2"]["nodes"]
+    except (KeyError, TypeError):
+        print("❌ ERRO NA RESPOSTA DA API SHOPEE:")
+        print("Status:", response.status_code)
+        print("Texto:", response.text)
+        return None
+
+    for item in nodes:
+        if item["itemId"] not in ids_enviados:
+            return item
+
     return None
 
 def enviar_oferta_para_canal():
@@ -107,19 +116,18 @@ def enviar_oferta_para_canal():
     imagem_final = gerar_imagem_personalizada(imagem)
 
     legenda = (
-        f"\U0001F4B8 *SUPER OFERTA DO DIA!* \U0001F4B8\n\n"
-        f"\U0001F381 *Produto:* \`{nome}\`\n\n"
-        f"\u274C De: *R$ {preco_original:,.2f}*\n"
-        f"\u2705 Por apenas: *R$ {preco_oferta:,.2f}*\n\n"
-        f"\U0001F525 *Descontos exclusivos para você economizar!*\n\n"
-        f"\U0001F389 *Estoque limitado e oferta por tempo curto!*\n\n"
-        f"\U0001F4AB *Compre diretamente na Shopee!*\n\n"
-        f"\U0001F517 [\U0001F680 COMPRAR AGORA]({link})\n\n"
-        f"⚠ _Corra! Pode acabar a qualquer momento._"
+        f"📢 *OFERTA IMPERDÍVEL!* \n\n"
+        f"🛍️ *Produto:*  `{nome}`\n\n"
+        f"❌ De: *R$ {preco_original:,.2f}*\n"
+        f"✅ Agora por: *R$ {preco_oferta:,.2f}*\n\n"
+        f"🔥 *Descontos exclusivos só hoje!*\n\n"
+        f"🎯 Estoque limitado, aproveite agora!\n"
+        f"🔗 [🚀 COMPRAR AGORA]({link})\n\n"
+        f"⚠ _Promoção sujeita à alteração de preço e estoque do site._"
     )
 
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("\U0001F517 COMPRAR AGORA \U0001F680", url=link))
+    markup.add(InlineKeyboardButton("🔗 COMPRAR AGORA 🚀", url=link))
 
     bot.send_photo(CANAL_ID, open(imagem_final, "rb"), caption=legenda, parse_mode="Markdown", reply_markup=markup)
     ids_enviados.add(item_id)
@@ -142,7 +150,7 @@ def start(message):
         markup = InlineKeyboardMarkup()
         estado_botao = "✅ BOT ON" if onoff else "❌ BOT OFF"
         markup.add(
-            InlineKeyboardButton("\ud83d\udcdc STATUS", callback_data="status"),
+            InlineKeyboardButton("📜 STATUS", callback_data="status"),
             InlineKeyboardButton(estado_botao, callback_data="LIGADELISGA")
         )
         try:
@@ -151,10 +159,10 @@ def start(message):
             pass
         time.sleep(1)
         bot.send_message(chat_id,
-            f"\ud83e\udd0d Olá {message.from_user.first_name}, {saudacao()}\nAcesse o *Painel Administrativo* abaixo:",
+            f"🔍 Olá {message.from_user.first_name}, {saudacao()}\nAcesse o *Painel Administrativo* abaixo:",
             parse_mode="Markdown", reply_markup=markup)
     else:
-        bot.send_message(chat_id, f"\ud83d\udc4b Olá {message.from_user.first_name}, {saudacao()}")
+        bot.send_message(chat_id, f"👋 Olá {message.from_user.first_name}, {saudacao()}")
 
 @bot.callback_query_handler(func=lambda call: call.data == "LIGADELISGA")
 def alternar_estado_bot(call):
@@ -170,7 +178,7 @@ def alternar_estado_bot(call):
 
     markup = InlineKeyboardMarkup()
     markup.add(
-        InlineKeyboardButton("\ud83d\udcdc STATUS", callback_data="status"),
+        InlineKeyboardButton("📜 STATUS", callback_data="status"),
         InlineKeyboardButton(novo_estado, callback_data="LIGADELISGA")
     )
 
